@@ -1,0 +1,22 @@
+{
+	"FileVersion" : 3,
+	
+	"FriendlyName" : "Simsala BIM",
+	"Version" : 1,
+	"VersionName" : "1.0a",
+	"CreatedBy" : "Dennis Ogiermann",
+	"CreatedByURL" : "https://github.com/termi-official",
+	"EngineVersion" : "4.14.3",
+	"Description" : "",
+	"Category" : "BIM",
+	"EnabledByDefault" : true,
+	
+	"Modules" :
+	[
+		{
+			"Name" : "SimsalaBIM",
+			"Type" : "Runtime"
+		}
+	],
+	"CanContainContent" : true
+}
