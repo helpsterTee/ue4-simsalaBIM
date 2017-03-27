@@ -46,91 +46,7 @@ public:
 
 void FSimsalaBimModule::StartupModule()
 {
-	/*
-	const TCHAR* const BimFilename = TEXT("z:/dennio/bimserver.json");
-	FString JsonString;
-	if (!FFileHelper::LoadFileToString(JsonString, BimFilename))
-	{
-		UE_LOG(BIMLOG, Error, TEXT("Failed to load file: %s"), BimFilename);
-		return;
-	}
-	TSharedRef<TJsonReader<>> Reader = FJsonStringReader::Create(JsonString);
-	TSharedPtr<FJsonObject> BimJson;
-	if (!FJsonSerializer::Deserialize(Reader, BimJson))
-	{
-		UE_LOG(BIMLOG, Error, TEXT("Failed to parse file: %s"), BimFilename);
-		return;
-	}
-
-	const TArray< TSharedPtr<FJsonValue> > *BimContent;
-	if (!BimJson->TryGetArrayField(TEXT("objects"), BimContent))
-	{
-		UE_LOG(BIMLOG, Error, TEXT("Failed to parse file: '%s'. Ill-formatted."), BimFilename);
-		return;
-	}
-
-	for (auto BimEntryVal : *BimContent)
-	{
-		const TSharedPtr<FJsonObject> *pBimEntry;
-		if (BimEntryVal->TryGetObject(pBimEntry))
-		{
-			TSharedPtr<FJsonObject> BimEntry = *pBimEntry;
-			FString EntryType;
-			if (BimEntry->TryGetStringField(TEXT("_t"), EntryType))
-			{
-				if (EntryType == TEXT("GeometryData"))
-				{
-					FString VerticesStr, IndicesStr, MaterialsStr, NormalsStr;
-					if (!BimEntry->TryGetStringField(TEXT("vertices"), VerticesStr) ||
-						!BimEntry->TryGetStringField(TEXT("indices"), IndicesStr) ||
-						!BimEntry->TryGetStringField(TEXT("materials"), MaterialsStr) ||
-						!BimEntry->TryGetStringField(TEXT("normals"), NormalsStr))
-					{
-						UE_LOG(BIMLOG, Warning, TEXT("Ill-Formatted GeometryData-entry. Skipping."));
-						return;
-					}
-					else
-					{
-						TArray<uint8> VerticesBin;
-						TArray<FVector> Vertices;
-						if (!FBase64::Decode(VerticesStr, VerticesBin))
-						{
-							UE_LOG(BIMLOG, Error, TEXT("GeometryData (vertices) corrupted."));
-							return;
-						}
-						else
-						{
-							for (int i = 0;i < VerticesBin.Num() / 3; i += 12)
-							{
-								float* x = reinterpret_cast<float*>(&VerticesBin[3 * i + 0]);
-								float* y = reinterpret_cast<float*>(&VerticesBin[3 * i + 4]);
-								float* z = reinterpret_cast<float*>(&VerticesBin[3 * i + 8]);
-								Vertices.Add(FVector(*x, *y, *z));
-							}
-						}
-
-						TArray<uint8> IndicesBin;
-						TArray<uint32> Indices;
-						if (!FBase64::Decode(IndicesStr, IndicesBin))
-						{
-							UE_LOG(BIMLOG, Error, TEXT("GeometryData (indices) corrupted."));
-							return;
-						}
-						else
-						{
-							for (int i = 0;i < IndicesBin.Num(); i += 4)
-							{
-								uint32* idx = reinterpret_cast<uint32*>(&IndicesBin[i]);
-								Indices.Add(*idx);
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-	*/
-
+/*
 	TSharedPtr<FJsonObject> ParametersObject = MakeShareable(new FJsonObject);
 	ParametersObject->SetStringField("username", TEXT("admin@local.host"));
 	ParametersObject->SetStringField("password", TEXT("1"));
@@ -172,6 +88,7 @@ void FSimsalaBimModule::StartupModule()
 			UE_LOG(BIMLOG, Log, TEXT("Login successful! Token is: %s"), *LoginToken);
 		});
 	HttpRequest->ProcessRequest();
+*/
 }
 
 void FSimsalaBimModule::ShutdownModule()

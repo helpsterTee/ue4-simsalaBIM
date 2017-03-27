@@ -8,6 +8,9 @@
 
 #include "StaticMeshResources.h"
 
+//#include "RuntimeMeshCore.h"
+#include "RuntimeMeshComponent.h"
+
 #include <limits>
 #include <algorithm>
 
@@ -1205,7 +1208,7 @@ bool USimsalaBimFunctionLibrary::LoadProject(AActor* ReferencePoint, UIfcProject
 	int objCount;
 	Ar << objCount;
 
-	TMap<int64, UInstancedStaticMeshComponent*> CreatedMeshes;
+	TMap<int64, URuntimeMeshComponent*> CreatedMeshes;
 	for (int counter = 0; counter < objCount; ++counter)
 	{
 		FString classname = "";
@@ -1264,26 +1267,28 @@ bool USimsalaBimFunctionLibrary::LoadProject(AActor* ReferencePoint, UIfcProject
 				Ar << objBounds[i];
 			}
 
-			FRawMesh IfcMesh;
 			//indices
 			int indicesLen;
 			Ar << indicesLen;
-			IfcMesh.WedgeIndices.AddUninitialized(indicesLen);
+			TArray<int32> Indices;
+			Indices.AddUninitialized(indicesLen);
 			for (int i = 0; i < indicesLen; i += 3)
 			{
 				int idx1, idx2, idx3;
 				Ar << idx1;
 				Ar << idx2;
 				Ar << idx3;
-				IfcMesh.WedgeIndices[i + 0] = idx1;
-				IfcMesh.WedgeIndices[i + 1] = idx3;
-				IfcMesh.WedgeIndices[i + 2] = idx2;
+
+				Indices[i + 0] = idx1;
+				Indices[i + 1] = idx3;
+				Indices[i + 2] = idx2;
 			}
 
 			//vertices
 			int verticesLen;
 			Ar << verticesLen;
-			IfcMesh.VertexPositions.AddUninitialized(verticesLen);
+			TArray<FVector> Vertices;
+			Vertices.AddUninitialized(verticesLen);
 			float lowestX = std::numeric_limits<float>::infinity();
 			float highestX = -std::numeric_limits<float>::infinity();
 			float lowestY = std::numeric_limits<float>::infinity();
@@ -1298,72 +1303,69 @@ bool USimsalaBimFunctionLibrary::LoadProject(AActor* ReferencePoint, UIfcProject
 				highestX = FMath::Max(highestX, x);
 				lowestY = FMath::Min(lowestY, y);
 				highestY = FMath::Max(highestY, y);
-				IfcMesh.VertexPositions[i] = (FVector(x, y, z));
+				Vertices[i] = FVector(x, y, z);
 			}
 
 			//tangents
 			int normalsLen;
 			Ar << normalsLen;
 
-			//float* normals = new float[normalsLen];
-			for (int i = 0; i < normalsLen; ++i)
+			TArray<FVector> Normals;
+			Normals.AddUninitialized(Indices.Num());
+			for (int i = 0; i < normalsLen / 3; ++i)
 			{
-				float killData;
-				Ar << killData;
+				float x, y, z;
+				Ar << x;
+				Ar << y;
+				Ar << z;
 			}
 
-			IfcMesh.WedgeTangentZ.AddUninitialized(IfcMesh.WedgeIndices.Num());
-			for (int i = 0; i < IfcMesh.WedgeIndices.Num(); i += 3)
+			TArray<FRuntimeMeshTangent> Tangents;
+			Tangents.AddUninitialized(Indices.Num());
+			for (int i = 0; i < Indices.Num(); i += 3)
 			{
 				const int idx1 = i;
 				const int idx2 = i + 1;
 				const int idx3 = i + 2;
-				FVector NormalCurrent = FVector::CrossProduct(IfcMesh.VertexPositions[idx1] - IfcMesh.VertexPositions[idx3], IfcMesh.VertexPositions[idx2] - IfcMesh.VertexPositions[idx3]).GetSafeNormal();
+				FVector Tangent = Vertices[idx1] - Vertices[idx3];
+				Tangents[idx1] = FRuntimeMeshTangent(Tangent.X, Tangent.Y, Tangent.Z);
+				Tangents[idx2] = FRuntimeMeshTangent(Tangent.X, Tangent.Y, Tangent.Z);
+				Tangents[idx3] = FRuntimeMeshTangent(Tangent.X, Tangent.Y, Tangent.Z);
 
-				IfcMesh.WedgeTangentZ[idx1] = NormalCurrent;
-				IfcMesh.WedgeTangentZ[idx2] = NormalCurrent;
-				IfcMesh.WedgeTangentZ[idx3] = NormalCurrent;
+				FVector NormalCurrent = FVector::CrossProduct(Tangent, Vertices[idx2] - Vertices[idx3]).GetSafeNormal();
+				Normals[idx1] = NormalCurrent;
+				Normals[idx2] = NormalCurrent;
+				Normals[idx3] = NormalCurrent;
 			}
 
 			//colors
 			int colorsLen;
 			Ar << colorsLen;
-
-			//float* colors = new float[colorsLen];
-			for (int i = 0; i < colorsLen; ++i) {
-				float killData;
-				Ar << killData;
+			TArray<FColor> VertexColors;
+			VertexColors.AddUninitialized(Indices.Num());
+			for (int i = 0; i < colorsLen/4; ++i) {
+				float r,g,b,a;
+				Ar << r;
+				Ar << g;
+				Ar << b;
+				Ar << a;
+				VertexColors[i] = FColor(r, g, b, a);
 			}
+
 			// assign UVs
 			float rangeX = (lowestX - highestX) * -1;
 			float offsetX = 0 - lowestX;
 			float rangeY = (lowestY - highestY) * -1;
 			float offsetY = 0 - lowestY;
-			IfcMesh.WedgeTexCoords[0].AddUninitialized(IfcMesh.WedgeIndices.Num());
-			for (int i = 0;i < IfcMesh.WedgeIndices.Num(); i++)
+			TArray<FVector2D> TextureCoordinates;
+			TextureCoordinates.AddUninitialized(Indices.Num());
+			for (int i = 0;i < Indices.Num(); i++)
 			{
-				auto idx = IfcMesh.WedgeIndices[i];
-				auto Pos = IfcMesh.VertexPositions[idx];
-				IfcMesh.WedgeTexCoords[0][i] = { (Pos.X + offsetX),  (Pos.Y + offsetY) };
+				auto idx = Indices[i];
+				auto Pos = Vertices[idx];
+				TextureCoordinates[i] = { (Pos.X + offsetX),  (Pos.Y + offsetY) };
 			}
 
-			IfcMesh.FaceSmoothingMasks.AddUninitialized(IfcMesh.WedgeIndices.Num() / 3);
-			IfcMesh.FaceMaterialIndices.AddUninitialized(IfcMesh.WedgeIndices.Num() / 3);
-			for (int i = 0;i < IfcMesh.WedgeIndices.Num() / 3;i++)
-			{
-				IfcMesh.FaceSmoothingMasks[i] = 1;
-				IfcMesh.FaceMaterialIndices[i] = 0;
-			}
-
-			if (!IfcMesh.IsValidOrFixable())
-			{
-				UE_LOG(BIMLOG, Error, TEXT("Corrupt mesh."));
-				continue;
-			}
-
-			//UE_LOG(LogTemp, Warning, TEXT("#--- Triangle count %d"), indicesLen / 3);
-			//UE_LOG(LogTemp, Warning, TEXT("#--- Normal count %d"), normalsLen);
-			//UE_LOG(LogTemp, Warning, TEXT("#--- Color count %d"), colorsLen);
 
 			if (classname.Equals("IfcOpeningElement"))
 			{
@@ -1375,37 +1377,63 @@ bool USimsalaBimFunctionLibrary::LoadProject(AActor* ReferencePoint, UIfcProject
 				UE_LOG(BIMLOG, Warning, TEXT("Possibly corrupt file: Geometry ID duplication."));
 			}
 
-			auto IfcStaticMesh = NewObject<UStaticMesh>(ReferencePoint);
-			FStaticMeshComponentRecreateRenderStateContext RecreateRenderStateContext(FindObject<UStaticMesh>(ReferencePoint, *ReferencePoint->GetFName().ToString()));
-
-			FStaticMeshSourceModel* SrcModel = new(IfcStaticMesh->SourceModels) FStaticMeshSourceModel();
-			SrcModel->RawMeshBulkData->SaveRawMesh(IfcMesh);
-			IfcStaticMesh->ImportVersion = EImportStaticMeshVersion::LastVersion;
-			IfcStaticMesh->Build();
-			IfcStaticMesh->MarkPackageDirty();
-
-			auto IfcMeshComponent = NewObject<UInstancedStaticMeshComponent>(ReferencePoint);
-			IfcMeshComponent->SetStaticMesh(IfcStaticMesh);
-			IfcMeshComponent->RegisterComponentWithWorld(ReferencePoint->GetWorld());
-			//IfcMeshComponent->SetMobility(EComponentMobility::Static);
-			ReferencePoint->AddOwnedComponent(IfcMeshComponent);
-			CreatedMeshes.Add(geometryDataId, IfcMeshComponent);
-			
-		}
-
-		if (!CreatedMeshes.Contains(geometryDataId))
-		{
-			UE_LOG(BIMLOG, Warning, TEXT("Possibly corrupt file: Geometry instance without geometry found."));
-		}
-		else
-		{
+			auto RuntimeMesh = NewObject<URuntimeMeshComponent>(ReferencePoint);
+			RuntimeMesh->CreateMeshSection(0, Vertices, Indices, Normals, TextureCoordinates, VertexColors, Tangents, true, EUpdateFrequency::Infrequent);
+			RuntimeMesh->RegisterComponentWithWorld(ReferencePoint->GetWorld());
 			const auto Trafo = FTransform(
 				{ RawMatrix[0][0], RawMatrix[0][1], RawMatrix[0][2] },
 				{ RawMatrix[1][0], RawMatrix[1][1], RawMatrix[1][2] },
 				{ RawMatrix[2][0], RawMatrix[2][1], RawMatrix[2][2] },
 				{ RawMatrix[3][0], RawMatrix[3][1], RawMatrix[3][2] }
 			);
-			CreatedMeshes[geometryDataId]->AddInstance(Trafo);
+			RuntimeMesh->SetRelativeTransform(Trafo);
+			ReferencePoint->AddOwnedComponent(RuntimeMesh);
+			CreatedMeshes.Add(geometryDataId, RuntimeMesh);
+		}
+		else // is instance ...
+		{
+			if (!CreatedMeshes.Contains(geometryDataId))
+			{
+				UE_LOG(BIMLOG, Warning, TEXT("Possibly corrupt file: Geometry instance without geometry found."));
+			}
+			else
+			{
+				const auto Trafo = FTransform(
+				{ RawMatrix[0][0], RawMatrix[0][1], RawMatrix[0][2] },
+				{ RawMatrix[1][0], RawMatrix[1][1], RawMatrix[1][2] },
+				{ RawMatrix[2][0], RawMatrix[2][1], RawMatrix[2][2] },
+				{ RawMatrix[3][0], RawMatrix[3][1], RawMatrix[3][2] }
+				);
+				const IRuntimeMeshVerticesBuilder* VB;
+				const FRuntimeMeshIndicesBuilder* IB;
+				CreatedMeshes[geometryDataId]->GetSectionMesh(0, VB, IB);
+
+				//TArray<FVector> Vertices;
+				//Vertices.AddUninitialized(VB->Length());
+				//TArray<FVector> Normals;
+				//Normals.AddUninitialized(VB->Length());
+				//TArray<FVector2> TextureCoordinates;
+				//TextureCoordinates.AddUninitialized(VB->Length());
+				//TArray<FColor> VertexColors;
+				//VertexColors.AddUninitialized(VB->Length());
+				//TArray<FRuntimeMeshTangent> Tangents;
+				//Tangents.AddUninitialized(VB->Length());
+
+				//TArray<int32> Indices;
+				//Indices.AddUninitialized(IB->Length());
+
+				//for (int i = 0;i < VB->Length(); ++i)
+				//{
+				//	Vertices[i] = 
+				//}
+
+				auto RuntimeMesh = NewObject<URuntimeMeshComponent>(ReferencePoint);
+				//RuntimeMesh->CreateMeshSection(0, Vertices, Indices, Normals, TextureCoordinates, VertexColors, Tangents, true, EUpdateFrequency::Infrequent);
+				RuntimeMesh->CreateMeshSection(0,*(VB->Clone()), *(IB->Clone()), true, EUpdateFrequency::Infrequent);
+				RuntimeMesh->RegisterComponentWithWorld(ReferencePoint->GetWorld());
+				ReferencePoint->AddOwnedComponent(RuntimeMesh);
+				RuntimeMesh->SetRelativeTransform(Trafo);
+			}
 		}
 	}
 
