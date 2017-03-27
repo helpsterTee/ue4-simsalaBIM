@@ -8,7 +8,7 @@ namespace UnrealBuildTool.Rules
     {
         public SimsalaBIM(TargetInfo Target)
         {
-            PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "Json", "RawMesh", "RenderCore", "HTTP", "UMG", "Slate", "SlateCore", "RuntimeMeshComponent" });
+            PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "Json", "RenderCore", "HTTP", "RuntimeMeshComponent" });
             PrivateDependencyModuleNames.AddRange(new string[] { });
 
             PrivateIncludePaths.AddRange(new string[] { "SimsalaBIM/Private" });

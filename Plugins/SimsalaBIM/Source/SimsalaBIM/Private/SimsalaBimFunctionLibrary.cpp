@@ -4,12 +4,10 @@
 
 #include "Engine.h"
 #include "Base64.h"
-#include "RawMesh.h"
+#include "Http.h"
 
-#include "StaticMeshResources.h"
-
-//#include "RuntimeMeshCore.h"
 #include "RuntimeMeshComponent.h"
+
 
 #include <limits>
 #include <algorithm>
@@ -492,6 +490,7 @@ struct SIfcElement
 
 bool USimsalaBimFunctionLibrary::ParseJsonIFC(FString FileName, AActor* TargetActor)
 {
+	/*
 	FString JsonString;
 	if (!FFileHelper::LoadFileToString(JsonString, *FileName))
 	{
@@ -710,11 +709,14 @@ bool USimsalaBimFunctionLibrary::ParseJsonIFC(FString FileName, AActor* TargetAc
 		}
 	}
 	return true;
+	*/
+	return false;
 }
 
 
 bool USimsalaBimFunctionLibrary::ParseBinaryIFC(FString FileName, AActor* TargetActor)
 {
+	/*
 	if (TargetActor == nullptr || !TargetActor->IsValidLowLevel())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("No target actor supplied."));
@@ -949,10 +951,11 @@ bool USimsalaBimFunctionLibrary::ParseBinaryIFC(FString FileName, AActor* Target
 		CreatedMeshes[geometryDataId]->AddInstance(Trafo);
 	}
 	return true;
+	*/
+	return false;
 }
 
 
-#include "Http.h"
 
 template<typename FunctorType>
 bool MakeRequest( FString Token, FString InterfaceName, FString MethodName, TSharedPtr<FJsonObject> ParametersObject, FunctorType&& Handler)
@@ -1041,19 +1044,18 @@ bool USimsalaBimFunctionLibrary::Connect(FString ServerName, FString Username, F
 		[](FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded) -> void {
 			if (!bSucceeded)
 			{
-				UE_LOG(BIMLOG, Warning, TEXT("Failed to login!"));
+				UE_LOG(BIMLOG, Error, TEXT("Failed to login!"));
 				return;
 			}
 			TSharedPtr<FJsonObject> JsonObject;
 			TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(HttpResponse->GetContentAsString());
 			if (!FJsonSerializer::Deserialize(Reader, JsonObject))
 			{
-				UE_LOG(BIMLOG, Warning, TEXT("Failed to login!"));
+				UE_LOG(BIMLOG, Error, TEXT("Failed to deserialize login response: %s"), *HttpResponse->GetContentAsString());
 				return;
 			}
 			TSharedPtr<FJsonObject> JsonResponse = JsonObject->GetObjectField("response");
 			USimsalaBimFunctionLibrary::CachedToken = JsonResponse->GetStringField("result");
-			UE_LOG(BIMLOG, Log, TEXT("Login successful! Token is: %s"), *USimsalaBimFunctionLibrary::CachedToken);
 		});
 	HttpRequest->ProcessRequest();
 
@@ -1128,7 +1130,6 @@ bool USimsalaBimFunctionLibrary::LoadProject(AActor* ReferencePoint, UIfcProject
 	ParametersObject->SetBoolField("sync", true);
 
 	FString DownloadLink;
-
 	bool RequestSucceeded = MakeRequest(CachedToken, "Bimsie1ServiceInterface", "download", ParametersObject,
 		[&DownloadLink](TSharedPtr<FJsonObject> JsonResponse) -> bool {
 		uint64 JsonResult = JsonResponse->GetNumberField("result");
@@ -1138,8 +1139,7 @@ bool USimsalaBimFunctionLibrary::LoadProject(AActor* ReferencePoint, UIfcProject
 			"&serializerOid=" + FString::FromInt(USimsalaBimFunctionLibrary::SerializerOID);
 		return true;
 	});
-	// http://localhost:8082/download?token=51510ef03fe178a535fc4114e6b0584c2b9ebd876254e44873962dc0f7b2dc59c96383b6be481a685d9166027a68b9fd&topicId=2&serializerOid=4259878&longActionId=2
-
+	
 	if (!RequestSucceeded)
 	{
 		return false;
