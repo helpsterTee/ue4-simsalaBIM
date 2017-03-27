@@ -3,6 +3,8 @@
 #include "Engine.h"
 #include "SimsalaBimFunctionLibrary.generated.h"
 
+
+
 UCLASS(BlueprintType)
 class UIfcProject
 	: public UObject
@@ -15,6 +17,8 @@ public:
 
 	uint64 OID;
 };
+
+
 
 UCLASS()
 class USimsalaBimFunctionLibrary
@@ -33,12 +37,6 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "BIM")
 	static bool GetProjectList(TArray<UIfcProject*>& Projects);
-
-	UFUNCTION(BlueprintCallable, Category = "BIM")
-	static bool ParseJsonIFC(FString FileName, AActor* TargetActor);
-
-	UFUNCTION(BlueprintCallable, Category = "BIM")
-	static bool ParseBinaryIFC(FString FileName, AActor* TargetActor);
 
 	UFUNCTION(BlueprintCallable, Category = "BIM")
 	static bool LoadProject(AActor* ReferencePoint, UIfcProject* Project);
